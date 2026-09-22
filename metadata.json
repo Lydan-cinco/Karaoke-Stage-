@@ -1,0 +1,6 @@
+{
+  "name": "YouTube Karaoke Queue",
+  "description": "Karaoke song queue with YouTube video playback, curated songbook, real-time vocal pitch detection, and dynamic singer scoring.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
