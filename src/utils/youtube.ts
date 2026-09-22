@@ -46,6 +46,62 @@ export interface YouTubeVideoInfo {
   thumbnailUrl: string;
 }
 
+export interface YouTubeSearchResult {
+  videoId: string;
+  title: string;
+  artist: string;
+  thumbnailUrl: string;
+  duration?: string;
+}
+
+// In-memory caches to make typing and auto-suggestions instant
+const suggestionsCache = new Map<string, string[]>();
+const searchResultsCache = new Map<string, YouTubeSearchResult[]>();
+
+export async function fetchYouTubeSuggestions(query: string): Promise<string[]> {
+  const q = query.trim();
+  if (!q) return [];
+  if (suggestionsCache.has(q)) {
+    return suggestionsCache.get(q)!;
+  }
+
+  try {
+    const res = await fetch(`/api/youtube-suggest?q=${encodeURIComponent(q)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data.suggestions) ? data.suggestions : [];
+      suggestionsCache.set(q, list);
+      return list;
+    }
+  } catch (err) {
+    console.warn('Error fetching YouTube suggestions:', err);
+  }
+
+  return [];
+}
+
+export async function searchYouTubeVideos(query: string): Promise<YouTubeSearchResult[]> {
+  const q = query.trim();
+  if (!q) return [];
+  if (searchResultsCache.has(q)) {
+    return searchResultsCache.get(q)!;
+  }
+
+  try {
+    const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(q)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const list: YouTubeSearchResult[] = Array.isArray(data.results) ? data.results : [];
+      searchResultsCache.set(q, list);
+      return list;
+    }
+  } catch (err) {
+    console.warn('Error searching YouTube videos:', err);
+  }
+
+  return [];
+}
+
 export async function fetchYouTubeVideoInfo(videoIdOrUrl: string): Promise<YouTubeVideoInfo> {
   const videoId = extractYouTubeId(videoIdOrUrl) || videoIdOrUrl.trim();
   

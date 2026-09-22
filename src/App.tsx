@@ -658,6 +658,10 @@ export default function App() {
         onQueueSong={handleQueueSong}
         onAddCustomSong={handleAddSongToSongbook}
         currentSingerName={currentSingerName}
+        onOpenYouTubeSearch={() => {
+          setIsSongbookOpen(false);
+          setIsAddSongOpen(true);
+        }}
       />
 
       <AddSongModal

@@ -8,7 +8,8 @@ import {
   User, 
   Check, 
   PlusCircle,
-  Loader2
+  Loader2,
+  Youtube
 } from 'lucide-react';
 import { Song, SongCategory } from '../types';
 import { extractYouTubeId, getYouTubeThumbnail, fetchYouTubeVideoInfo } from '../utils/youtube';
@@ -20,6 +21,7 @@ interface SongbookModalProps {
   onQueueSong: (song: Song, singerName: string) => void;
   onAddCustomSong: (newSong: Song) => void;
   currentSingerName: string;
+  onOpenYouTubeSearch?: (query?: string) => void;
 }
 
 const CATEGORIES: SongCategory[] = [
@@ -40,6 +42,7 @@ export function SongbookModal({
   onQueueSong,
   onAddCustomSong,
   currentSingerName,
+  onOpenYouTubeSearch,
 }: SongbookModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<SongCategory>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -454,15 +457,26 @@ export function SongbookModal({
                   <p className="text-xs text-slate-500 mt-1 mb-4">
                     Try searching for another artist, or add this song yourself!
                   </p>
-                  <button
-                    onClick={() => {
-                      setIsAddingNew(true);
-                      setNewTitle(searchQuery);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold cursor-pointer"
-                  >
-                    Add "{searchQuery}" to Songbook
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onOpenYouTubeSearch && (
+                      <button
+                        onClick={() => onOpenYouTubeSearch(searchQuery)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Youtube className="w-3.5 h-3.5" />
+                        <span>Search YouTube for "{searchQuery}"</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setIsAddingNew(true);
+                        setNewTitle(searchQuery);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 cursor-pointer"
+                    >
+                      Add Manually
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

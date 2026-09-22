@@ -8,7 +8,8 @@ import {
   ChevronDown, 
   User, 
   PlusCircle, 
-  BookOpen
+  BookOpen,
+  Search
 } from 'lucide-react';
 import { PerformanceRecord, QueueItem, Song } from '../types';
 import { getYouTubeThumbnail } from '../utils/youtube';
@@ -87,10 +88,11 @@ export function SongQueue({
           <button
             id="queue-add-btn"
             onClick={onOpenAddModal}
-            className="p-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-            title="Paste YouTube Link"
+            className="p-1.5 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-white border border-sky-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold px-2"
+            title="Search YouTube & Auto-Suggest (Queue Song)"
           >
-            <PlusCircle className="w-4 h-4" />
+            <Search className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Search</span>
           </button>
           <button
             id="queue-songbook-btn"

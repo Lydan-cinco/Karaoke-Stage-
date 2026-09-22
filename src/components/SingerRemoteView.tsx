@@ -22,10 +22,18 @@ import {
   Camera,
   CameraOff,
   Sun,
-  Moon
+  Moon,
+  X
 } from 'lucide-react';
 import { QueueItem, Song, SongCategory, RemoteReaction } from '../types';
-import { extractYouTubeId, fetchYouTubeVideoInfo, getYouTubeThumbnail } from '../utils/youtube';
+import { 
+  extractYouTubeId, 
+  fetchYouTubeVideoInfo, 
+  getYouTubeThumbnail,
+  fetchYouTubeSuggestions,
+  searchYouTubeVideos,
+  YouTubeSearchResult
+} from '../utils/youtube';
 import { syncService } from '../utils/syncService';
 import { SingerCamera } from './SingerCamera';
 import { useTheme } from '../context/ThemeContext';
@@ -57,7 +65,7 @@ export function SingerRemoteView({
   const [isSelfieCamActive, setIsSelfieCamActive] = useState<boolean>(false);
   const { mode, toggleThemeMode } = useTheme();
 
-  // YouTube Link Form states - only URL and singer name needed!
+  // YouTube Search & Link Form states
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [detectedId, setDetectedId] = useState<string | null>(null);
   const [detectedTitle, setDetectedTitle] = useState('');
@@ -66,6 +74,102 @@ export function SingerRemoteView({
   const [playPriority, setPlayPriority] = useState<'end' | 'next'>('end');
   const [linkError, setLinkError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // YouTube auto-suggestions & video search states
+  const [remoteSuggestions, setRemoteSuggestions] = useState<string[]>([]);
+  const [showRemoteSuggestions, setShowRemoteSuggestions] = useState(false);
+  const [remoteSearchResults, setRemoteSearchResults] = useState<YouTubeSearchResult[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
+
+  // Debounced auto-suggestions (like YouTube search dropdown)
+  useEffect(() => {
+    const q = youtubeUrl.trim();
+    if (!q || extractYouTubeId(q)) {
+      setRemoteSuggestions([]);
+      setShowRemoteSuggestions(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const timer = setTimeout(async () => {
+      try {
+        const list = await fetchYouTubeSuggestions(q);
+        if (isCurrent) {
+          setRemoteSuggestions(list);
+          if (list.length > 0) setShowRemoteSuggestions(true);
+        }
+      } catch {
+        // ignore
+      }
+    }, 180);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [youtubeUrl]);
+
+  // Execute YouTube video search from remote phone
+  const handlePerformRemoteSearch = async (queryText: string) => {
+    const q = queryText.trim();
+    if (!q) return;
+
+    if (extractYouTubeId(q)) {
+      setShowRemoteSuggestions(false);
+      return;
+    }
+
+    setIsSearchingRemote(true);
+    setShowRemoteSuggestions(false);
+    setLinkError('');
+
+    try {
+      const results = await searchYouTubeVideos(q);
+      setRemoteSearchResults(results);
+      if (results.length === 0) {
+        setLinkError(`No videos found for "${q}". Try another song!`);
+      }
+    } catch {
+      setLinkError('Search temporarily unavailable. Please try again.');
+    } finally {
+      setIsSearchingRemote(false);
+    }
+  };
+
+  const handleSelectRemoteSuggestion = (sug: string) => {
+    setYoutubeUrl(sug);
+    setShowRemoteSuggestions(false);
+    handlePerformRemoteSearch(sug);
+  };
+
+  const handleQuickQueueVideo = async (
+    video: YouTubeSearchResult, 
+    isNextPriority: boolean = false
+  ) => {
+    const effectiveSinger = singerName.trim() || 'Karaoke Star';
+    setIsSubmitting(true);
+
+    const song: Song = {
+      id: `remote-${Date.now()}-${video.videoId}`,
+      title: video.title,
+      artist: video.artist,
+      youtubeId: video.videoId,
+      youtubeUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+      category: 'Pop',
+      duration: video.duration,
+      isCustom: true,
+      tags: ['remote', 'youtube-search'],
+    };
+
+    const res = await syncService.addSong(song, effectiveSinger, false, isNextPriority, roomId);
+    setIsSubmitting(false);
+
+    if (res && res.success) {
+      showToast(`✨ Queued "${video.title}" for ${effectiveSinger}!`);
+    } else {
+      setLinkError('Failed to send song to stage. Please try again.');
+    }
+  };
 
   // Auto-detect video info when URL changes
   useEffect(() => {
@@ -444,28 +548,28 @@ export function SingerRemoteView({
         </div>
       </div>
 
-      {/* Tabs: Link, Songbook, Queue */}
+      {/* Tabs: Search & Queue, Songbook, Queue */}
       <div className="px-3 pt-1">
-        <div className="flex rounded-xl bg-slate-200/70 p-1 text-xs font-semibold">
+        <div className="flex rounded-xl bg-slate-200/70 dark:bg-slate-800 p-1 text-xs font-semibold">
           <button
             id="tab-remote-link"
             onClick={() => setActiveTab('link')}
             className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'link'
-                ? 'bg-white text-sky-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Youtube className="w-4 h-4 text-rose-500" />
-            <span>Paste Link</span>
+            <Search className="w-4 h-4 text-rose-500" />
+            <span>Search & Queue</span>
           </button>
           <button
             id="tab-remote-songbook"
             onClick={() => setActiveTab('songbook')}
             className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'songbook'
-                ? 'bg-white text-sky-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <BookOpen className="w-4 h-4 text-sky-600" />
@@ -476,11 +580,11 @@ export function SingerRemoteView({
             onClick={() => setActiveTab('queue')}
             className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'queue'
-                ? 'bg-white text-sky-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <ListMusic className="w-4 h-4 text-slate-700" />
+            <ListMusic className="w-4 h-4 text-slate-700 dark:text-slate-300" />
             <span>Up Next ({queue.length})</span>
           </button>
         </div>
@@ -488,45 +592,194 @@ export function SingerRemoteView({
 
       {/* Tab Content */}
       <div className="p-3 flex-1 overflow-y-auto">
-        {/* Tab 1: Paste YouTube Link */}
+        {/* Tab 1: YouTube Search & Auto-Suggest */}
         {activeTab === 'link' && (
-          <div className="bg-white rounded-2xl border border-sky-100 p-4 shadow-xs space-y-4">
+          <div className="bg-white dark:bg-slate-850 rounded-2xl border border-sky-100 dark:border-slate-800 p-4 shadow-xs space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Youtube className="w-4 h-4 text-rose-500" />
-                Queue Any YouTube Song to the Stage
+                Search & Queue Any YouTube Song
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Paste any YouTube karaoke or instrumental video link. It will automatically queue to the TV!
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Type any song or artist for live suggestions, or paste a direct YouTube video link.
               </p>
             </div>
 
             {linkError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs">
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-300 text-xs">
                 {linkError}
               </div>
             )}
 
-            <form onSubmit={handleQueueYoutubeLink} className="space-y-3.5">
-              {/* 1. YouTube Video Link */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  YouTube Video Link or ID *
-                </label>
-                <input
-                  id="remote-youtube-url-input"
-                  type="text"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=... or youtu.be/..."
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-mono focus:outline-none focus:border-sky-500 focus:bg-white"
-                />
+            {/* Search Input with YouTube Auto-Suggestions */}
+            <div className="relative">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Search Song / Artist or Paste Link *
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    id="remote-youtube-url-input"
+                    type="text"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    onFocus={() => {
+                      if (remoteSuggestions.length > 0) setShowRemoteSuggestions(true);
+                    }}
+                    placeholder="e.g. Bohemian Rhapsody, My Way, or link..."
+                    className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                  />
+                  {youtubeUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setYoutubeUrl('');
+                        setRemoteSuggestions([]);
+                        setShowRemoteSuggestions(false);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePerformRemoteSearch(youtubeUrl)}
+                  disabled={!youtubeUrl.trim() || isSearchingRemote}
+                  className="px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+                >
+                  {isSearchingRemote ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Search</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              {/* Automatic Video Preview Card */}
+              {/* YouTube Auto-Suggestions Dropdown */}
+              {showRemoteSuggestions && remoteSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-sky-100 dark:border-slate-700 shadow-xl overflow-hidden z-30">
+                  <div className="py-1 max-h-48 overflow-y-auto">
+                    {remoteSuggestions.map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => handleSelectRemoteSuggestion(sug)}
+                        className="w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Search className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate">{sug}</span>
+                        </div>
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400 shrink-0">Search</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Popular quick chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto mt-2 pb-1 text-xs no-scrollbar">
+                <span className="text-[10px] font-semibold text-slate-400 shrink-0">Popular:</span>
+                {['Bohemian Rhapsody', 'My Way', 'Cruel Summer', 'Shallow', 'Dancing Queen', 'Hotel California'].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      setYoutubeUrl(chip);
+                      handlePerformRemoteSearch(chip);
+                    }}
+                    className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 shrink-0 cursor-pointer"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Video Search Results List with 1-click Queueing */}
+            {remoteSearchResults.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    YouTube Karaoke Tracks ({remoteSearchResults.length})
+                  </span>
+                  <span className="text-[10px] font-normal text-slate-400">1-Tap Queue</span>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {remoteSearchResults.map((video) => (
+                    <div
+                      key={video.videoId}
+                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2"
+                    >
+                      <div 
+                        onClick={() => {
+                          setYoutubeUrl(`https://www.youtube.com/watch?v=${video.videoId}`);
+                          setDetectedId(video.videoId);
+                          setDetectedTitle(video.title);
+                          setDetectedArtist(video.artist);
+                        }}
+                        className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+                      >
+                        <div className="relative w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-900 border border-slate-200 dark:border-slate-700">
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          {video.duration && (
+                            <span className="absolute bottom-0.5 right-0.5 px-0.5 bg-black/80 text-white text-[8px] font-mono rounded">
+                              {video.duration}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h5 className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                            {video.title}
+                          </h5>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {video.artist}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickQueueVideo(video, true)}
+                          className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-200/80 dark:border-amber-800 cursor-pointer"
+                          title="Play Next (VIP)"
+                        >
+                          VIP
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickQueueVideo(video, false)}
+                          className="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold shadow-2xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Queue</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Direct Link / Selected Track Card */}
+            <form onSubmit={handleQueueYoutubeLink} className="space-y-3.5 pt-2 border-t border-sky-100 dark:border-slate-800">
               {detectedId && (
-                <div className="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200 flex items-center gap-3">
-                  <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-200 border border-slate-300">
+                <div className="p-2.5 rounded-xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 flex items-center gap-3">
+                  <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600">
                     <img
                       src={getYouTubeThumbnail(detectedId)}
                       alt="Thumbnail"
@@ -534,22 +787,22 @@ export function SingerRemoteView({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold mb-0.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Valid YouTube Link</span>
+                    <div className="flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mb-0.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Ready to Queue</span>
                     </div>
                     {isLoadingInfo ? (
-                      <div className="flex items-center gap-1.5 text-xs text-sky-700 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs text-sky-700 dark:text-sky-300 font-medium">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         <span>Detecting song...</span>
                       </div>
                     ) : (
                       <div>
-                        <h5 className="text-xs font-bold text-slate-900 truncate">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {detectedTitle || `YouTube Track (${detectedId})`}
                         </h5>
                         {detectedArtist && (
-                          <p className="text-[11px] text-slate-500 truncate">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                             {detectedArtist}
                           </p>
                         )}
@@ -559,10 +812,10 @@ export function SingerRemoteView({
                 </div>
               )}
 
-              {/* 2. Singer's Name Only */}
+              {/* Singer's Name */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Singer's Name *
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Your Singer Name *
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -571,15 +824,15 @@ export function SingerRemoteView({
                     type="text"
                     value={singerName}
                     onChange={(e) => setSingerName(e.target.value)}
-                    placeholder="Enter the name of the singer"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-sky-500 focus:bg-white"
+                    placeholder="Enter your name"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
 
               {/* Priority Choice */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Queue Priority
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -588,8 +841,8 @@ export function SingerRemoteView({
                     onClick={() => setPlayPriority('end')}
                     className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
                       playPriority === 'end'
-                        ? 'bg-sky-50 border-sky-300 text-sky-700'
-                        : 'bg-white border-slate-200 text-slate-600'
+                        ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />
@@ -600,8 +853,8 @@ export function SingerRemoteView({
                     onClick={() => setPlayPriority('next')}
                     className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
                       playPriority === 'next'
-                        ? 'bg-amber-50 border-amber-300 text-amber-700'
-                        : 'bg-white border-slate-200 text-slate-600'
+                        ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />

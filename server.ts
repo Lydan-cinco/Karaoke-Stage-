@@ -133,6 +133,121 @@ async function startServer() {
     });
   });
 
+  // YouTube search query suggestions (auto-suggestions like in YouTube search)
+  app.get('/api/youtube-suggest', async (req: Request, res: Response) => {
+    const query = (req.query.q as string || '').trim();
+    if (!query) {
+      res.json({ suggestions: [] });
+      return;
+    }
+    try {
+      const searchUrl = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(query)}`;
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const rawSuggestions: string[] = Array.isArray(data?.[1]) ? data[1] : [];
+        res.json({
+          suggestions: rawSuggestions.slice(0, 8),
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('Suggest error:', err);
+    }
+    res.json({ suggestions: [] });
+  });
+
+  // YouTube video search (returns karaoke video options with thumbnails, titles, artist channels, and duration)
+  app.get('/api/youtube-search', async (req: Request, res: Response) => {
+    const rawQuery = (req.query.q as string || '').trim();
+    if (!rawQuery) {
+      res.json({ results: [] });
+      return;
+    }
+
+    // Check if it's already a YouTube URL or direct ID
+    const directIdMatch = rawQuery.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/)|youtube\.com\/live\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/i);
+    const directId = directIdMatch ? directIdMatch[1] : (/^[a-zA-Z0-9_-]{11}$/.test(rawQuery) ? rawQuery : null);
+
+    if (directId) {
+      try {
+        const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${directId}&format=json`;
+        const response = await fetch(oembedUrl);
+        if (response.ok) {
+          const data = (await response.json()) as any;
+          res.json({
+            results: [{
+              videoId: directId,
+              title: data.title || `YouTube Video (${directId})`,
+              artist: data.author_name || 'YouTube Video',
+              thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${directId}/hqdefault.jpg`,
+              duration: '',
+            }]
+          });
+          return;
+        }
+      } catch {}
+
+      res.json({
+        results: [{
+          videoId: directId,
+          title: `YouTube Video (${directId})`,
+          artist: 'YouTube Video',
+          thumbnailUrl: `https://img.youtube.com/vi/${directId}/hqdefault.jpg`,
+          duration: '',
+        }]
+      });
+      return;
+    }
+
+    // Search YouTube for karaoke tracks
+    const searchQuery = rawQuery.toLowerCase().includes('karaoke') ? rawQuery : `${rawQuery} karaoke`;
+    try {
+      const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+      const response = await fetch(ytUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        const match = html.match(/var ytInitialData = ({.*?});<\/script>/s) || html.match(/ytInitialData\s*=\s*({.+?});/);
+        if (match) {
+          const parsed = JSON.parse(match[1]);
+          const contents = parsed.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
+          const videos: any[] = [];
+          for (const item of contents) {
+            const v = item.videoRenderer;
+            if (v && v.videoId && v.title?.runs?.[0]?.text) {
+              videos.push({
+                videoId: v.videoId,
+                title: v.title.runs[0].text,
+                artist: v.ownerText?.runs?.[0]?.text || 'Karaoke',
+                thumbnailUrl: v.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://img.youtube.com/vi/${v.videoId}/hqdefault.jpg`,
+                duration: v.lengthText?.simpleText || '',
+              });
+              if (videos.length >= 10) break;
+            }
+          }
+          if (videos.length > 0) {
+            res.json({ results: videos });
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('YouTube search error:', err);
+    }
+
+    res.json({ results: [] });
+  });
+
   // 1. Health check
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });

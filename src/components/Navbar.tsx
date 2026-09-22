@@ -14,7 +14,8 @@ import {
   Radio,
   Sun,
   Moon,
-  Palette
+  Palette,
+  Search
 } from 'lucide-react';
 import { audioService } from '../utils/audioSynth';
 import { useTheme } from '../context/ThemeContext';
@@ -413,14 +414,15 @@ export function Navbar({
             )}
           </button>
 
-          {/* Add YouTube Song Link Button */}
+          {/* Search & Add YouTube Song Button */}
           <button
             id="open-add-song-btn"
             onClick={onOpenAddModal}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-sm shadow-sky-600/20 transition-all active:scale-95 cursor-pointer"
+            title="Search YouTube & Auto-Suggest (Queue Song)"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Add Song</span>
+            <Search className="w-3.5 h-3.5" />
+            <span>Search & Add Song</span>
           </button>
         </div>
       </div>
