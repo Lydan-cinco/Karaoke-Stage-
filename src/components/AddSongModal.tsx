@@ -353,9 +353,9 @@ export function AddSongModal({
               </span>
             </label>
 
-            <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2">
+            <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2.5">
               <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
                 <input
                   id="modal-youtube-search-input"
                   type="text"
@@ -365,8 +365,8 @@ export function AddSongModal({
                     if (suggestions.length > 0) setShowSuggestionsDropdown(true);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="e.g. Bohemian Rhapsody, Cruel Summer, or paste YouTube link..."
-                  className="w-full pl-10 pr-9 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 shadow-sm transition-all"
+                  placeholder="Type song title, artist, or paste YouTube link..."
+                  className="w-full pl-12 pr-11 py-3.5 sm:py-4 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm sm:text-base font-medium focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 shadow-sm transition-all placeholder:text-slate-400"
                   autoFocus
                 />
                 {searchInput && (
@@ -377,24 +377,28 @@ export function AddSongModal({
                       setSuggestions([]);
                       setShowSuggestionsDropdown(false);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
 
+              {/* Big, High-Visibility Search Button */}
               <button
                 id="modal-run-search-btn"
                 type="submit"
                 disabled={!searchInput.trim() || isSearching}
-                className="px-4 py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                className="px-5 sm:px-7 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-500 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md shadow-sky-500/25 hover:shadow-lg hover:shadow-sky-500/30 active:scale-98 transition-all cursor-pointer shrink-0"
               >
                 {isSearching ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Searching...</span>
+                  </>
                 ) : (
                   <>
-                    <Search className="w-4 h-4" />
+                    <Search className="w-5 h-5 stroke-[2.5]" />
                     <span>Search</span>
                   </>
                 )}
@@ -668,11 +672,11 @@ export function AddSongModal({
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-sky-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-sky-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 cursor-pointer"
+                className="px-5 py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold border border-slate-200 dark:border-slate-700 cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -680,16 +684,16 @@ export function AddSongModal({
                 id="modal-submit-song-btn"
                 type="submit"
                 disabled={!selectedVideo}
-                className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm sm:text-base font-bold shadow-md shadow-sky-500/25 flex items-center gap-2 cursor-pointer active:scale-98 transition-all"
               >
                 {actionType === 'playNow' ? (
                   <>
-                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <Play className="w-4 h-4 fill-current" />
                     <span>Start Singing Now</span>
                   </>
                 ) : (
                   <>
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
                     <span>{actionType === 'playNext' ? 'Queue to Play Next' : 'Add to Queue'}</span>
                   </>
                 )}

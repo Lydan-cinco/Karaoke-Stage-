@@ -555,6 +555,21 @@ export default function App() {
               compactMode={currentView === 'admin'}
               liveNotices={liveNotices}
               floatingReactions={floatingReactions}
+              scoreModalSlot={
+                <ScoringModal
+                  isOpen={activeScoreRecord !== null}
+                  onClose={() => setActiveScoreRecord(null)}
+                  record={activeScoreRecord}
+                  nextItem={queue[0] || null}
+                  onNextSinger={handlePassMicToNext}
+                  onReplaySong={handleReplayCurrent}
+                  onOpenLeaderboard={() => {
+                    setActiveScoreRecord(null);
+                    setIsLeaderboardOpen(true);
+                  }}
+                  onUpdateScore={handleUpdateRecordScore}
+                />
+              }
             />
 
             {/* In Admin view, show the active queue command center beneath the monitor */}
@@ -670,20 +685,6 @@ export default function App() {
         onAddSong={handleAddCustomLink}
         recentSingers={recentSingers}
         currentSingerName={currentSingerName}
-      />
-
-      <ScoringModal
-        isOpen={activeScoreRecord !== null}
-        onClose={() => setActiveScoreRecord(null)}
-        record={activeScoreRecord}
-        nextItem={queue[0] || null}
-        onNextSinger={handlePassMicToNext}
-        onReplaySong={handleReplayCurrent}
-        onOpenLeaderboard={() => {
-          setActiveScoreRecord(null);
-          setIsLeaderboardOpen(true);
-        }}
-        onUpdateScore={handleUpdateRecordScore}
       />
 
       <LeaderboardModal

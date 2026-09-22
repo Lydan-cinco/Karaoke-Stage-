@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { 
   SkipForward, 
   RotateCcw, 
@@ -53,6 +53,7 @@ interface KaraokeStageProps {
   compactMode?: boolean;
   liveNotices?: LiveNotice[];
   floatingReactions?: FloatingReaction[];
+  scoreModalSlot?: ReactNode;
 }
 
 export function KaraokeStage({
@@ -74,6 +75,7 @@ export function KaraokeStage({
   compactMode = false,
   liveNotices = [],
   floatingReactions = [],
+  scoreModalSlot,
 }: KaraokeStageProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [micVolume, setMicVolume] = useState<number>(0);
@@ -634,6 +636,9 @@ export function KaraokeStage({
             )}
           </div>
         )}
+
+        {/* Score modal slot rendered inside stage viewport for fullscreen containment */}
+        {scoreModalSlot}
       </div>
 
       {/* Live Audio Visualizer & Stage Footer */}

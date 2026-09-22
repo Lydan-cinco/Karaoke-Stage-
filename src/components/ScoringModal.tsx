@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { RotateCcw, SkipForward, X } from 'lucide-react';
 import { PerformanceRecord, QueueItem } from '../types';
@@ -13,6 +14,7 @@ interface ScoringModalProps {
   onReplaySong: () => void;
   onOpenLeaderboard?: () => void;
   onUpdateScore?: (updatedRecord: PerformanceRecord) => void;
+  containerElement?: HTMLElement | null;
 }
 
 export function ScoringModal({
@@ -22,12 +24,14 @@ export function ScoringModal({
   nextItem,
   onNextSinger,
   onReplaySong,
+  containerElement,
 }: ScoringModalProps) {
   const [displayedScore, setDisplayedScore] = useState(0);
   const [countdown, setCountdown] = useState(10);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(true);
   const [isScoreLocked, setIsScoreLocked] = useState(false);
   const animFrameRef = useRef<number | null>(null);
+  const confettiCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Auto-advance countdown timer when next song is in queue
   useEffect(() => {
@@ -94,12 +98,29 @@ export function ScoringModal({
 
         // 3. Confetti shower for celebratory scores
         if (targetScore >= 80) {
-          confetti({
-            particleCount: 90,
-            spread: 80,
-            origin: { y: 0.58 },
-            colors: ['#0284c7', '#38bdf8', '#e0f2fe', '#f59e0b', '#10b981'],
-          });
+          try {
+            if (confettiCanvasRef.current) {
+              const myConfetti = confetti.create(confettiCanvasRef.current, {
+                resize: true,
+                useWorker: true,
+              });
+              myConfetti({
+                particleCount: 90,
+                spread: 80,
+                origin: { y: 0.58 },
+                colors: ['#0284c7', '#38bdf8', '#e0f2fe', '#f59e0b', '#10b981'],
+              });
+            } else {
+              confetti({
+                particleCount: 90,
+                spread: 80,
+                origin: { y: 0.58 },
+                colors: ['#0284c7', '#38bdf8', '#e0f2fe', '#f59e0b', '#10b981'],
+              });
+            }
+          } catch {
+            // Fallback safe ignore
+          }
         }
 
         // 4. Videoke Brass Fanfare Jingle (260ms after lock-in)
@@ -133,14 +154,32 @@ export function ScoringModal({
 
   if (!isOpen || !record) return null;
 
-  return (
+  // Resolve target portal mount node:
+  // 1. Explicit containerElement passed in props
+  // 2. Currently active browser fullscreenElement (if user full-screened the video/stage)
+  // 3. Fallback to document.body
+  const mountTarget =
+    containerElement ||
+    (typeof document !== 'undefined'
+      ? (document.fullscreenElement as HTMLElement) ||
+        ((document as any).webkitFullscreenElement as HTMLElement) ||
+        document.body
+      : null);
+
+  const modalContent = (
     <div 
       id="score-page-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/80 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
+      {/* Canvas for local confetti in fullscreen or body */}
+      <canvas
+        ref={confettiCanvasRef}
+        className="pointer-events-none absolute inset-0 z-[100000] w-full h-full"
+      />
+
       <div 
-        className="relative bg-white dark:bg-slate-900 border border-sky-100 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-center flex flex-col p-6 sm:p-8 transition-colors"
+        className="relative z-[100001] bg-white dark:bg-slate-900 border border-sky-100 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-center flex flex-col p-6 sm:p-8 transition-colors max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -218,4 +257,10 @@ export function ScoringModal({
       </div>
     </div>
   );
+
+  if (mountTarget && typeof document !== 'undefined') {
+    return createPortal(modalContent, mountTarget);
+  }
+
+  return modalContent;
 }

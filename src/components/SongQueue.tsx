@@ -84,20 +84,20 @@ export function SongQueue({
         </div>
 
         {/* Quick Add Actions */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             id="queue-add-btn"
             onClick={onOpenAddModal}
-            className="p-1.5 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-white border border-sky-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold px-2"
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-sky-500/20 active:scale-95 transition-all cursor-pointer"
             title="Search YouTube & Auto-Suggest (Queue Song)"
           >
-            <Search className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Search</span>
+            <Search className="w-4 h-4 stroke-[2.5]" />
+            <span>Search & Add</span>
           </button>
           <button
             id="queue-songbook-btn"
             onClick={onOpenSongbook}
-            className="p-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
             title="Browse Songbook"
           >
             <BookOpen className="w-4 h-4" />
@@ -202,15 +202,24 @@ export function SongQueue({
                 Queue is Empty
               </h5>
               <p className="text-xs text-slate-500 mb-4 max-w-xs">
-                No songs waiting. Add YouTube links or select songs from the songbook!
+                No songs waiting. Search YouTube or select songs from the songbook!
               </p>
-              <button
-                onClick={onOpenSongbook}
-                className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-sky-50 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-sky-600" />
-                <span>Open Songbook</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onOpenAddModal}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold shadow-sm shadow-sky-500/25 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                >
+                  <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Search YouTube</span>
+                </button>
+                <button
+                  onClick={onOpenSongbook}
+                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-sky-50 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Open Songbook</span>
+                </button>
+              </div>
             </div>
           )
         ) : (

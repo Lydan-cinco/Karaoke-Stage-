@@ -618,7 +618,7 @@ export function SingerRemoteView({
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <input
                     id="remote-youtube-url-input"
                     type="text"
@@ -628,7 +628,7 @@ export function SingerRemoteView({
                       if (remoteSuggestions.length > 0) setShowRemoteSuggestions(true);
                     }}
                     placeholder="e.g. Bohemian Rhapsody, My Way, or link..."
-                    className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs focus:outline-none focus:border-sky-500"
+                    className="w-full pl-10 pr-9 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-xs sm:text-sm font-medium focus:outline-none focus:border-sky-500"
                   />
                   {youtubeUrl && (
                     <button
@@ -638,7 +638,7 @@ export function SingerRemoteView({
                         setRemoteSuggestions([]);
                         setShowRemoteSuggestions(false);
                       }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -648,13 +648,13 @@ export function SingerRemoteView({
                   type="button"
                   onClick={() => handlePerformRemoteSearch(youtubeUrl)}
                   disabled={!youtubeUrl.trim() || isSearchingRemote}
-                  className="px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-sm shadow-sky-500/25 active:scale-95 cursor-pointer shrink-0"
                 >
                   {isSearchingRemote ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <Search className="w-3.5 h-3.5" />
+                      <Search className="w-4 h-4 stroke-[2.5]" />
                       <span>Search</span>
                     </>
                   )}
